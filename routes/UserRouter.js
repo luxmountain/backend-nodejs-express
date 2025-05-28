@@ -3,14 +3,6 @@ const User = require("../db/userModel");
 const router = express.Router();
 const mongoose = require("mongoose");
 
-router.post("/", async (request, response) => {
-  
-});
-
-router.get("/", async (request, response) => {
-  
-});
-
 // GET /user/list - Return minimal user info for sidebar
 router.get("/list", async (req, res) => {
   try {

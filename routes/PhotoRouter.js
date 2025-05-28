@@ -4,14 +4,6 @@ const mongoose = require("mongoose");
 const User = require("../db/userModel");
 const router = express.Router();
 
-router.post("/", async (request, response) => {
-  
-});
-
-router.get("/", async (request, response) => {
-  
-});
-
 // GET /photosOfUser/:id - Return all photos for a user with comments and minimal user info
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
