@@ -2,9 +2,43 @@ const express = require("express");
 const User = require("../db/userModel");
 const router = express.Router();
 const mongoose = require("mongoose");
+const auth = require("../middleware/auth");
 
-// GET /user/list - Return minimal user info for sidebar
-router.get("/list", async (req, res) => {
+// Registration
+router.post("/", async (req, res) => {
+  try {
+    const { login_name, password, first_name, last_name, location, description, occupation } = req.body;
+
+    // Validate required fields
+    if (!login_name || !password || !first_name || !last_name) {
+      return res.status(400).send({ error: "Required fields missing" });
+    }
+
+    // Check if login_name already exists
+    const existingUser = await User.findOne({ login_name });
+    if (existingUser) {
+      return res.status(400).send({ error: "Login name already exists" });
+    }
+
+    const user = new User({
+      login_name,
+      password,
+      first_name,
+      last_name,
+      location,
+      description,
+      occupation
+    });
+
+    await user.save();
+    res.status(201).send({ login_name: user.login_name, _id: user._id });
+  } catch (error) {
+    res.status(400).send({ error: error.message });
+  }
+});
+
+// GET /user/list - Return minimal user info for sidebar (protected)
+router.get("/list", auth, async (req, res) => {
   try {
     const users = await User.find({}, "_id first_name last_name");
     res.json(users);
@@ -13,8 +47,8 @@ router.get("/list", async (req, res) => {
   }
 });
 
-// GET /user/:id - Return detailed user info
-router.get("/:id", async (req, res) => {
+// GET /user/:id - Return detailed user info (protected)
+router.get("/:id", auth, async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: "Invalid user id" });
