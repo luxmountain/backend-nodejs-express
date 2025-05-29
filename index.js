@@ -8,7 +8,13 @@ const AuthRouter = require("./routes/AuthRouter");
 
 dbConnect();
 
-app.use(cors());
+const allowedOrigin = 'http://localhost:3000';
+
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true,
+}));
+
 app.use(express.json());
 app.use("/api/user", UserRouter);
 app.use("/api/photo", PhotoRouter);
