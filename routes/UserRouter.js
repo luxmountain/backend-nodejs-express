@@ -87,4 +87,34 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+router.get("/comment/:userId", async (req, res) => {
+  const { userId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid userId" });
+  }
+
+  try {
+    const result = await Photo.aggregate([
+      { $unwind: "$comments" },
+      { $match: { "comments.user_id": new mongoose.Types.ObjectId(userId) } },
+      {
+        $project: {
+          _id: 0,
+          photo_id: "$_id",
+          file_name: 1,
+          photo_date_time: "$date_time",
+          comment_id: "$comments._id",
+          comment_text: "$comments.comment",
+          comment_date_time: "$comments.date_time"
+        }
+      }
+    ]);
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error in /commentsOfUser:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;
