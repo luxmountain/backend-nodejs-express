@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png/;
@@ -59,7 +59,7 @@ router.post("/new", upload.single("photo"), async (req, res) => {
 router.post("/commentsOfPhoto/:photo_id", async (req, res) => {
   try {
     const { comment, user_id } = req.body;
-    
+
     if (!comment || comment.trim().length === 0) {
       return res.status(400).send({ error: "Comment cannot be empty" });
     }
@@ -111,6 +111,11 @@ router.get("/:id", async (req, res) => {
     return res.status(400).json({ error: "Invalid user id" });
   }
   try {
+    const userExists = await User.exists({ _id: id });
+    if (!userExists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
     const photos = await Photo.find({ user_id: id });
     const result = await Promise.all(photos.map(async (photo) => {
       const comments = await Promise.all((photo.comments || []).map(async (comment) => {

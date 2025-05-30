@@ -2,6 +2,7 @@ const express = require("express");
 const User = require("../db/userModel");
 const router = express.Router();
 const mongoose = require("mongoose");
+const Photo = require("../db/photoModel");
 
 // Registration (public)
 router.post("/", async (req, res) => {
@@ -38,8 +39,33 @@ router.post("/", async (req, res) => {
 router.get("/list", async (req, res) => {
   try {
     const users = await User.find({}, "_id first_name last_name");
-    res.json(users);
+
+    const enrichedUsers = await Promise.all(
+      users.map(async (user) => {
+        const [photoCount, commentCountAgg] = await Promise.all([
+          Photo.countDocuments({ user_id: user._id }),
+          Photo.aggregate([
+            { $unwind: "$comments" },
+            { $match: { "comments.user_id": new mongoose.Types.ObjectId(user._id) } },
+            { $count: "count" }
+          ])
+        ]);
+
+        const commentCount = commentCountAgg.length > 0 ? commentCountAgg[0].count : 0;
+
+        return {
+          _id: user._id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          photoCount,
+          commentCount
+        };
+      })
+    );
+
+    res.json(enrichedUsers);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
