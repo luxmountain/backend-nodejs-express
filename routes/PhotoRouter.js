@@ -3,7 +3,6 @@ const Photo = require("../db/photoModel");
 const mongoose = require("mongoose");
 const User = require("../db/userModel");
 const router = express.Router();
-const auth = require("../middleware/auth");
 const multer = require("multer");
 const path = require("path");
 
@@ -28,16 +27,23 @@ const upload = multer({
   }
 });
 
-// Upload new photo
-router.post("/new", auth, upload.single("photo"), async (req, res) => {
+// Upload new photo (no auth)
+router.post("/new", upload.single("photo"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).send({ error: "No file uploaded" });
     }
 
+    // Without auth, you might need user_id in body or something else:
+    // For example, require user_id from body (you can change as needed)
+    const userId = req.body.user_id;
+    if (!userId) {
+      return res.status(400).send({ error: "User ID is required" });
+    }
+
     const photo = new Photo({
       file_name: req.file.filename,
-      user_id: req.user.userId,
+      user_id: userId,
       date_time: new Date(),
       comments: []
     });
@@ -49,13 +55,16 @@ router.post("/new", auth, upload.single("photo"), async (req, res) => {
   }
 });
 
-// Add comment to photo
-router.post("/commentsOfPhoto/:photo_id", auth, async (req, res) => {
+// Add comment to photo (no auth)
+router.post("/commentsOfPhoto/:photo_id", async (req, res) => {
   try {
-    const { comment } = req.body;
+    const { comment, user_id } = req.body;
     
     if (!comment || comment.trim().length === 0) {
       return res.status(400).send({ error: "Comment cannot be empty" });
+    }
+    if (!user_id) {
+      return res.status(400).send({ error: "User ID is required" });
     }
 
     const photo = await Photo.findById(req.params.photo_id);
@@ -65,7 +74,7 @@ router.post("/commentsOfPhoto/:photo_id", auth, async (req, res) => {
 
     photo.comments.push({
       comment: comment,
-      user_id: req.user.userId,
+      user_id: user_id,
       date_time: new Date()
     });
 
@@ -95,15 +104,14 @@ router.post("/commentsOfPhoto/:photo_id", auth, async (req, res) => {
   }
 });
 
-// GET /photosOfUser/:id - Return all photos for a user with comments and minimal user info (protected)
-router.get("/:id", auth, async (req, res) => {
+// GET /photosOfUser/:id - Return all photos for a user with comments (no auth)
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: "Invalid user id" });
   }
   try {
     const photos = await Photo.find({ user_id: id });
-    // For each photo, populate comments with minimal user info
     const result = await Promise.all(photos.map(async (photo) => {
       const comments = await Promise.all((photo.comments || []).map(async (comment) => {
         const user = await User.findById(comment.user_id).select("_id first_name last_name");
