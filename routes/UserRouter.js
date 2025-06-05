@@ -108,6 +108,34 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(400).json({ error: "Invalid user id" });
+
+  const { first_name, last_name, location, occupation, description } = req.body;
+  
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { first_name, last_name, location, occupation, description },
+      { new: true, runValidators: true },
+    )
+
+    if (!updatedUser)
+      return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser
+    })
+
+  } catch (error) {
+    res.status(500).json({ error: "Error edit user info" });
+  }
+})
+
 router.get("/comment/:userId", async (req, res) => {
   const { userId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(userId)) {

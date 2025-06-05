@@ -56,8 +56,42 @@ router.post("/new", upload.single("photo"), async (req, res) => {
   }
 });
 
+router.delete("/commentsOfPhoto/:photo_id/:comment_id", async (req, res) => {
+  const { photo_id, comment_id } = req.params;
+
+  if (
+    !mongoose.Types.ObjectId.isValid(photo_id) ||
+    !mongoose.Types.ObjectId.isValid(comment_id)
+  )
+    return res.status(400).json({ errpr: "Invalid photo ID or comment ID" });
+
+  try {
+    const photo = await Photo.findById(photo_id);
+    if (!photo) {
+      return res.status(404).json({
+        error: "Photo not found"
+      });
+    }
+
+    const initialLength = photo.comments.length;
+    photo.comments = photo.comments.filter(
+      (comment) => comment._id.toString() !== comment_id
+    )
+
+    if (initialLength === photo.comments.length)
+      return res.status(404).json({ error: "Comment not found"});
+
+    await photo.save();
+    res.status(200).json({
+      message: "Comment deleted successfully"
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Add comment to photo (no auth)
-router.post("/commentsOfPhoto/:photo_id", async (req, res) => {
+router.post("/commentOfPhoto/:photo_id", async (req, res) => {
   try {
     const { comment, user_id } = req.body;
 
