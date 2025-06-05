@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../db/userModel');
 const jwt = require('jsonwebtoken');
+require("dotenv").config();
 
 // Login
 router.post('/login', async (req, res) => {
@@ -18,7 +19,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).send({ error: 'Invalid login credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id }, 'your_jwt_secret', { expiresIn: '24h' });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
     res.send({
       _id: user._id,
