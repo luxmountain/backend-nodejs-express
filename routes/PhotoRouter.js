@@ -5,6 +5,7 @@ const User = require("../db/userModel");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
@@ -136,6 +137,33 @@ router.get("/:id", async (req, res) => {
       };
     }));
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/:photo_id", async (req, res) => {
+  const { photo_id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(photo_id)) {
+    return res.status(400).json({ error: "Invalid photo ID" });
+  }
+
+  try {
+    const photo = await Photo.findById(photo_id);
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    const filePath = path.join(__dirname, "..", "images", photo.file_name);
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.warn("File could not be deleted:", err.message); // log không chặn xóa
+      }
+    });
+
+    await photo.deleteOne();
+    res.status(200).json({ message: "Photo deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
