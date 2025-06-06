@@ -56,6 +56,45 @@ router.post("/new", upload.single("photo"), async (req, res) => {
   }
 });
 
+router.put("/commentsOfPhoto/:photo_id/:comment_id", async (req, res) => {
+  const { photo_id, comment_id } = req.params;
+  const { comment } = req.body;
+
+  if (
+    !mongoose.Types.ObjectId.isValid(photo_id) ||
+    !mongoose.Types.ObjectId.isValid(comment_id)
+  )
+    return res.status(400).json({ errpr: "Invalid photo ID or comment ID" });
+
+  if (!comment || comment.trim().length === 0)
+    return res.status(400).json({
+      error: "Comment cannot be empty"
+    });
+
+  try {
+    const photo = await Photo.findById(photo_id);
+    if (!photo) {
+      return res.status(404).json({
+        error: "Photo not found"
+      });
+    }
+
+    const targetComment = photo.comments.id(comment_id);
+    if (!targetComment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    targetComment.comment = comment;
+
+    await photo.save();
+    res.status(200).json({
+      message: "Comment updated successfully"
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/commentsOfPhoto/:photo_id/:comment_id", async (req, res) => {
   const { photo_id, comment_id } = req.params;
 
@@ -79,7 +118,7 @@ router.delete("/commentsOfPhoto/:photo_id/:comment_id", async (req, res) => {
     )
 
     if (initialLength === photo.comments.length)
-      return res.status(404).json({ error: "Comment not found"});
+      return res.status(404).json({ error: "Comment not found" });
 
     await photo.save();
     res.status(200).json({
@@ -167,7 +206,8 @@ router.get("/:id", async (req, res) => {
         user_id: photo.user_id,
         file_name: photo.file_name,
         date_time: photo.date_time,
-        comments
+        comments,
+        likes: photo.likes || [],
       };
     }));
     res.json(result);
@@ -192,7 +232,7 @@ router.delete("/:photo_id", async (req, res) => {
     const filePath = path.join(__dirname, "..", "images", photo.file_name);
     fs.unlink(filePath, (err) => {
       if (err) {
-        console.warn("File could not be deleted:", err.message); // log không chặn xóa
+        console.warn("File could not be deleted:", err.message);
       }
     });
 
@@ -200,6 +240,78 @@ router.delete("/:photo_id", async (req, res) => {
     res.status(200).json({ message: "Photo deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:photo_id/like", async (req, res) => {
+  const { photo_id } = req.params;
+  const { user_id } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(photo_id) ||
+    (!mongoose.Types.ObjectId.isValid(user_id)))
+    return res.status(400).json({ error: "Invalid photo ID or user ID" });
+
+  try {
+
+    const photo = await Photo.findById(photo_id);
+    if (!photo)
+      return res.status(404).json({
+        error: "Photo not found"
+      });
+
+    const alreadyLiked = photo.likes.some(
+      (like) => like.user_id.toString() === user_id
+    );
+
+    if (alreadyLiked)
+      return res.status(400).json({
+        error: "User already liked this photo"
+      });
+
+    photo.likes.push({
+      user_id
+    });
+
+    await photo.save();
+    res.status(200).json({
+      message: "Photo liked succesfully"
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/:photo_id/like", async (req, res) => {
+  const { photo_id } = req.params;
+  const { user_id } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(photo_id) ||
+    (!mongoose.Types.ObjectId.isValid(user_id)))
+    return res.status(400).json({ error: "Invalid photo ID or user ID" });
+
+  try {
+    const photo = await Photo.findById(photo_id);
+    if (!photo)
+      return res.status(404).json({
+        error: "Photo not found"
+      });
+
+    const initialLength = photo.likes.length;
+    photo.likes = photo.likes.filter(
+      (like) => like.user_id.toString() !== user_id
+    );
+
+    if (initialLength === photo.likes.length)
+      return res.status(400).json({
+        error: "User has not liked this photo"
+      });
+
+    await photo.save();
+    res.status(200).json({
+      message: "Photo unliked succesfully"
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

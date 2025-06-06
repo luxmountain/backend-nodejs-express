@@ -7,7 +7,7 @@ const Photo = require("../db/photoModel");
 // Registration (public)
 router.post("/", async (req, res) => {
   try {
-    const { login_name, password, first_name, last_name, location, description, occupation } = req.body;
+    const { login_name, password, first_name, last_name, gender, location, description, occupation } = req.body;
 
     if (!login_name || !password || !first_name || !last_name) {
       return res.status(400).send({ error: "Required fields missing" });
@@ -23,6 +23,7 @@ router.post("/", async (req, res) => {
       password,
       first_name,
       last_name,
+      gender,
       location,
       description,
       occupation
@@ -77,7 +78,7 @@ router.get("/:id", async (req, res) => {
     return res.status(400).json({ error: "Invalid user id" });
   }
   try {
-    const user = await User.findById(id).select("_id first_name last_name location description occupation");
+    const user = await User.findById(id).select("_id first_name last_name gender location description occupation");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
